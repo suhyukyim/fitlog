@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg: #121417;
   --surface: #1c1f24;
   --border: #2a2e35;
@@ -331,6 +332,7 @@ main {
   min-height: 44px;
   background: none;
   border: none;
+  color: var(--text);
   font-size: 18px;
   cursor: pointer;
   touch-action: manipulation;

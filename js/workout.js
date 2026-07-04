@@ -31,7 +31,7 @@
 
     // routineName(선택): 지정하면 세션의 routineName을 함께 설정한다(루틴 적용 시 사용).
     addExercisesByNames: function(names, routineName) {
-      addExercisesByNames(this, names, routineName);
+      return addExercisesByNames(this, names, routineName);
     }
   };
 
@@ -184,8 +184,12 @@
         // 추가하지 않는다(중복 방지). 이때도 "추가했습니다"라고 토스트를 띄우면 실제
         // 결과와 다른 안내가 되므로, 추가 전 상태를 미리 확인해 메시지를 구분한다.
         const alreadyExists = !!(session && session.exercises.some(function(e) { return e.name === name; }));
-        addExercisesByNames(workout, [name]);
-        FitLog.ui.toast(alreadyExists ? '이미 추가된 종목입니다' : '종목을 추가했습니다');
+        const ok = addExercisesByNames(workout, [name]);
+        if (alreadyExists) {
+          FitLog.ui.toast('이미 추가된 종목입니다');
+        } else if (ok) {
+          FitLog.ui.toast('종목을 추가했습니다');
+        }
       });
     });
     area.appendChild(addBtn);
@@ -228,8 +232,9 @@
     delBtn.setAttribute('aria-label', '종목 삭제');
     delBtn.addEventListener('click', function() {
       FitLog.ui.confirm('"' + ex.name + '" 종목을 삭제할까요?', function() {
-        removeExercise(workout, session.id, ex.name);
-        FitLog.ui.toast('종목을 삭제했습니다');
+        if (removeExercise(workout, session.id, ex.name)) {
+          FitLog.ui.toast('종목을 삭제했습니다');
+        }
       });
     });
 
@@ -294,8 +299,9 @@
       delBtn.textContent = '🗑';
       delBtn.setAttribute('aria-label', '세트 삭제');
       delBtn.addEventListener('click', function() {
-        removeSet(workout, session.id, ex.name, idx);
-        FitLog.ui.toast('세트를 삭제했습니다');
+        if (removeSet(workout, session.id, ex.name, idx)) {
+          FitLog.ui.toast('세트를 삭제했습니다');
+        }
       });
 
       actions.appendChild(editBtn);
@@ -341,8 +347,9 @@
           FitLog.ui.toast(result.message);
           return;
         }
-        updateSet(workout, session.id, ex.name, idx, result.value);
-        FitLog.ui.toast('세트를 수정했습니다');
+        if (updateSet(workout, session.id, ex.name, idx, result.value)) {
+          FitLog.ui.toast('세트를 수정했습니다');
+        }
       });
 
       row.appendChild(weightInput);
@@ -414,8 +421,9 @@
         FitLog.ui.toast(result.message);
         return;
       }
-      addSet(workout, session.id, ex.name, result.value);
-      FitLog.ui.toast('세트를 추가했습니다');
+      if (addSet(workout, session.id, ex.name, result.value)) {
+        FitLog.ui.toast('세트를 추가했습니다');
+      }
     });
 
     row.appendChild(weightInput);
@@ -453,50 +461,57 @@
 
   // ---------- 저장 헬퍼 (모두 즉시 saveSessions + render) ----------
 
+  // 저장 헬퍼는 모두 saveSessions()의 성공 여부(boolean)를 반환한다.
+  // 호출부는 이 값으로 성공 토스트 표시 여부를 결정한다(실패 시 storage.save가
+  // 이미 에러 토스트를 띄웠으므로 성공 토스트를 또 띄우면 안내가 겹치거나 틀린다).
   function addSet(workout, sessionId, exName, setValue) {
     const sessions = FitLog.storage.getSessions();
     const session = sessions.find(function(s) { return s.id === sessionId; });
-    if (!session) return;
+    if (!session) return false;
     const ex = session.exercises.find(function(e) { return e.name === exName; });
-    if (!ex) return;
+    if (!ex) return false;
     ex.sets.push(setValue);
-    FitLog.storage.saveSessions(sessions);
+    const ok = FitLog.storage.saveSessions(sessions);
     workout.render();
+    return ok;
   }
 
   function updateSet(workout, sessionId, exName, idx, setValue) {
     const sessions = FitLog.storage.getSessions();
     const session = sessions.find(function(s) { return s.id === sessionId; });
-    if (!session) return;
+    if (!session) return false;
     const ex = session.exercises.find(function(e) { return e.name === exName; });
-    if (!ex || !ex.sets[idx]) return;
+    if (!ex || !ex.sets[idx]) return false;
     ex.sets[idx] = setValue;
-    FitLog.storage.saveSessions(sessions);
+    const ok = FitLog.storage.saveSessions(sessions);
     workout.render();
+    return ok;
   }
 
   function removeSet(workout, sessionId, exName, idx) {
     const sessions = FitLog.storage.getSessions();
     const session = sessions.find(function(s) { return s.id === sessionId; });
-    if (!session) return;
+    if (!session) return false;
     const ex = session.exercises.find(function(e) { return e.name === exName; });
-    if (!ex) return;
+    if (!ex) return false;
     ex.sets.splice(idx, 1);
-    FitLog.storage.saveSessions(sessions);
+    const ok = FitLog.storage.saveSessions(sessions);
     workout.render();
+    return ok;
   }
 
   // 마지막 종목 삭제로 exercises가 비면 세션 자체를 배열에서 제거(달력 색칠 해제 목적)
   function removeExercise(workout, sessionId, exName) {
     let sessions = FitLog.storage.getSessions();
     const session = sessions.find(function(s) { return s.id === sessionId; });
-    if (!session) return;
+    if (!session) return false;
     session.exercises = session.exercises.filter(function(e) { return e.name !== exName; });
     if (session.exercises.length === 0) {
       sessions = sessions.filter(function(s) { return s.id !== sessionId; });
     }
-    FitLog.storage.saveSessions(sessions);
+    const ok = FitLog.storage.saveSessions(sessions);
     workout.render();
+    return ok;
   }
 
   function addExercisesByNames(workout, names, routineName) {
@@ -514,7 +529,8 @@
     if (routineName) {
       session.routineName = routineName;
     }
-    FitLog.storage.saveSessions(sessions);
+    const ok = FitLog.storage.saveSessions(sessions);
     workout.render();
+    return ok;
   }
 })();

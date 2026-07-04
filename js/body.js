@@ -98,7 +98,10 @@
       return { ok: false, message: '날짜를 입력하세요' };
     }
 
-    const weight = parseFloat(weightStr);
+    // weight/bodyFat 모두 Number()로 통일한다(workout.js validateSetInputs와 동일한
+    // 기준). 빈 문자열은 Number('') === 0이 되어 weight < 20 검증에 걸려 그대로
+    // 거부되므로 parseFloat(NaN 거부)와 결과가 같다.
+    const weight = Number(weightStr);
     if (!isFinite(weight) || weight < 20 || weight > 300) {
       return { ok: false, message: '체중은 20~300 사이여야 합니다' };
     }
@@ -106,7 +109,7 @@
     let bodyFat = null;
     const fatTrim = (fatStr === undefined || fatStr === null) ? '' : String(fatStr).trim();
     if (fatTrim !== '') {
-      bodyFat = parseFloat(fatTrim);
+      bodyFat = Number(fatTrim);
       if (!isFinite(bodyFat) || bodyFat < 0 || bodyFat > 70) {
         return { ok: false, message: '체지방률은 0~70 사이여야 합니다' };
       }
@@ -137,8 +140,9 @@
       metrics.push(entry);
     }
 
-    FitLog.storage.saveBodyMetrics(metrics);
-    FitLog.ui.toast(overwritten ? '덮어썼습니다' : '저장했습니다');
+    if (FitLog.storage.saveBodyMetrics(metrics)) {
+      FitLog.ui.toast(overwritten ? '덮어썼습니다' : '저장했습니다');
+    }
     bodyState.render();
   }
 
@@ -236,8 +240,9 @@
     delBtn.setAttribute('aria-label', '기록 삭제');
     delBtn.addEventListener('click', function() {
       FitLog.ui.confirm(formatShortDate(m.date) + ' 기록을 삭제할까요?', function() {
-        removeEntry(bodyState, m.date);
-        FitLog.ui.toast('삭제했습니다');
+        if (removeEntry(bodyState, m.date)) {
+          FitLog.ui.toast('삭제했습니다');
+        }
       });
     });
 
@@ -249,7 +254,8 @@
   function removeEntry(bodyState, date) {
     let metrics = FitLog.storage.getBodyMetrics();
     metrics = metrics.filter(function(m) { return m.date !== date; });
-    FitLog.storage.saveBodyMetrics(metrics);
+    const ok = FitLog.storage.saveBodyMetrics(metrics);
     bodyState.render();
+    return ok;
   }
 })();

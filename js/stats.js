@@ -24,7 +24,7 @@
   // ---------- 종목 목록 ----------
 
   function getAllExerciseNames(sessions) {
-    const seen = {};
+    const seen = Object.create(null);
     const names = [];
     sessions.forEach(function(s) {
       (s.exercises || []).forEach(function(ex) {

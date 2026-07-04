@@ -30,7 +30,7 @@ FitLog.storage = {
   },
 
   saveSessions(arr) {
-    this.save('fitlog_sessions', arr);
+    return this.save('fitlog_sessions', arr);
   },
 
   getBodyMetrics() {
@@ -38,7 +38,7 @@ FitLog.storage = {
   },
 
   saveBodyMetrics(arr) {
-    this.save('fitlog_bodyMetrics', arr);
+    return this.save('fitlog_bodyMetrics', arr);
   },
 
   getRoutines() {
@@ -46,7 +46,7 @@ FitLog.storage = {
   },
 
   saveRoutines(arr) {
-    this.save('fitlog_routines', arr);
+    return this.save('fitlog_routines', arr);
   },
 
   getExerciseDB() {
@@ -54,7 +54,7 @@ FitLog.storage = {
   },
 
   saveExerciseDB(db) {
-    this.save('fitlog_exerciseDB', db);
+    return this.save('fitlog_exerciseDB', db);
   },
 
   uuid() {
@@ -103,7 +103,9 @@ FitLog.storage = {
   },
 
   // 구조 검증을 모두 통과한 뒤에만 저장을 시작한다(중간에 실패하면 어떤
-  // localStorage 키도 건드리지 않은 채 false를 반환).
+  // localStorage 키도 건드리지 않은 채 false를 반환). 저장 도중 하나라도
+  // 실패하면(예: 저장 공간 초과) 이미 쓰여진 키들을 가져오기 전 상태로 되돌려
+  // 신/구 데이터가 섞이지 않도록 한다(전부 성공 또는 전부 원상복구).
   importJSON(text) {
     let data;
     try {
@@ -129,10 +131,25 @@ FitLog.storage = {
       return false;
     }
 
-    this.saveSessions(sessions);
-    this.saveBodyMetrics(bodyMetrics);
-    this.saveRoutines(routines);
-    this.saveExerciseDB(exerciseDB);
+    const keys = ['fitlog_sessions', 'fitlog_bodyMetrics', 'fitlog_routines', 'fitlog_exerciseDB'];
+    const snapshot = keys.map(function(key) { return localStorage.getItem(key); });
+
+    const ok = this.saveSessions(sessions) &&
+      this.saveBodyMetrics(bodyMetrics) &&
+      this.saveRoutines(routines) &&
+      this.saveExerciseDB(exerciseDB);
+
+    if (!ok) {
+      keys.forEach(function(key, i) {
+        if (snapshot[i] === null) {
+          localStorage.removeItem(key);
+        } else {
+          localStorage.setItem(key, snapshot[i]);
+        }
+      });
+      return false;
+    }
+
     return true;
   }
 };

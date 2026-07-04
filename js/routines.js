@@ -98,9 +98,9 @@
   function deleteRoutine(id) {
     let routines = FitLog.storage.getRoutines();
     routines = routines.filter(function(r) { return r.id !== id; });
-    FitLog.storage.saveRoutines(routines);
+    const ok = FitLog.storage.saveRoutines(routines);
     renderList();
-    FitLog.ui.toast('루틴을 삭제했습니다');
+    if (ok) FitLog.ui.toast('루틴을 삭제했습니다');
   }
 
   // ---------- 생성/수정 편집 화면 (풀스크린 오버레이) ----------
@@ -256,10 +256,10 @@
         routines.push({ id: FitLog.storage.uuid(), name: trimmed, exerciseNames: names.slice() });
       }
 
-      FitLog.storage.saveRoutines(routines);
+      const ok = FitLog.storage.saveRoutines(routines);
       close();
       renderList();
-      FitLog.ui.toast('저장했습니다');
+      if (ok) FitLog.ui.toast('저장했습니다');
     }
 
     render();
@@ -326,8 +326,9 @@
     // addExercisesByNames(names, routineName)의 두 번째 인자로 세션의 routineName을
     // 함께 설정한다(별도 setter를 만들지 않고 기존 함수를 확장하는 쪽을 선택 — 세션 로직이
     // workout.js 한 곳에 남고, 저장/렌더 순서를 다시 조율할 필요가 없어 더 단순하다).
-    FitLog.workout.addExercisesByNames(routine.exerciseNames, routine.name);
-    FitLog.ui.toast('루틴을 적용했습니다');
+    if (FitLog.workout.addExercisesByNames(routine.exerciseNames, routine.name)) {
+      FitLog.ui.toast('루틴을 적용했습니다');
+    }
   }
 
   // ---------- 데이터 관리 (JSON export/import 백업) ----------

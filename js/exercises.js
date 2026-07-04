@@ -186,9 +186,9 @@
             return false;
           }
           db.bodyParts.push({ id: FitLog.storage.uuid(), name: value, exercises: [] });
-          FitLog.storage.saveExerciseDB(db);
+          const ok = FitLog.storage.saveExerciseDB(db);
           render();
-          FitLog.ui.toast('부위를 추가했습니다');
+          if (ok) FitLog.ui.toast('부위를 추가했습니다');
           return true;
         });
       }
@@ -207,9 +207,9 @@
           const target = db.bodyParts.find(function(p) { return p.id === part.id; });
           if (!target) return true;
           target.name = value;
-          FitLog.storage.saveExerciseDB(db);
+          const ok = FitLog.storage.saveExerciseDB(db);
           render();
-          FitLog.ui.toast('부위 이름을 수정했습니다');
+          if (ok) FitLog.ui.toast('부위 이름을 수정했습니다');
           return true;
         });
       }
@@ -218,9 +218,9 @@
         FitLog.ui.confirm('부위와 하위 종목이 모두 삭제됩니다. "' + part.name + '"을(를) 삭제할까요?', function() {
           const db = FitLog.storage.getExerciseDB();
           db.bodyParts = db.bodyParts.filter(function(p) { return p.id !== part.id; });
-          FitLog.storage.saveExerciseDB(db);
+          const ok = FitLog.storage.saveExerciseDB(db);
           render();
-          FitLog.ui.toast('부위를 삭제했습니다');
+          if (ok) FitLog.ui.toast('부위를 삭제했습니다');
         });
       }
 
@@ -238,9 +238,9 @@
             return false;
           }
           target.exercises.push({ id: FitLog.storage.uuid(), name: value });
-          FitLog.storage.saveExerciseDB(db);
+          const ok = FitLog.storage.saveExerciseDB(db);
           render();
-          FitLog.ui.toast('종목을 추가했습니다');
+          if (ok) FitLog.ui.toast('종목을 추가했습니다');
           return true;
         });
       }
@@ -261,9 +261,9 @@
           const exTarget = target.exercises.find(function(e) { return e.id === ex.id; });
           if (!exTarget) return true;
           exTarget.name = value;
-          FitLog.storage.saveExerciseDB(db);
+          const ok = FitLog.storage.saveExerciseDB(db);
           render();
-          FitLog.ui.toast('종목 이름을 수정했습니다');
+          if (ok) FitLog.ui.toast('종목 이름을 수정했습니다');
           return true;
         });
       }
@@ -272,12 +272,13 @@
         FitLog.ui.confirm('"' + ex.name + '" 종목을 삭제할까요?', function() {
           const db = FitLog.storage.getExerciseDB();
           const target = db.bodyParts.find(function(p) { return p.id === part.id; });
+          let ok = true;
           if (target) {
             target.exercises = target.exercises.filter(function(e) { return e.id !== ex.id; });
-            FitLog.storage.saveExerciseDB(db);
+            ok = FitLog.storage.saveExerciseDB(db);
           }
           render();
-          FitLog.ui.toast('종목을 삭제했습니다');
+          if (ok) FitLog.ui.toast('종목을 삭제했습니다');
         });
       }
 
