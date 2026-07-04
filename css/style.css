@@ -516,3 +516,100 @@ main {
   flex: 1;
   min-width: 0;
 }
+
+/* 체중 탭 - 입력 폼 */
+.body-form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.form-label:first-child {
+  margin-top: 0;
+}
+
+.body-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background-color: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+}
+
+.body-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.body-save-btn {
+  width: 100%;
+  margin-top: 12px;
+}
+
+/* 체중 탭 - 기간 선택 */
+.period-btns {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.period-btn {
+  flex: 1;
+}
+
+.period-btn.active {
+  background-color: var(--accent);
+  color: #fff;
+}
+
+/* 체중 탭 - 최근 기록 리스트 */
+.body-list-empty {
+  color: var(--text-dim);
+  text-align: center;
+  padding: 16px 0;
+}
+
+.body-list-label {
+  font-size: 14px;
+}
+
+/* SVG 꺾은선 그래프 (공용) */
+.line-chart {
+  display: block;
+  width: 100%;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.chart-dot {
+  fill: var(--accent);
+}
+
+.chart-gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-axis-label {
+  fill: var(--text-dim);
+  font-size: 10px;
+}
+
+.chart-empty {
+  color: var(--text-dim);
+  text-align: center;
+  padding: 32px 0;
+}

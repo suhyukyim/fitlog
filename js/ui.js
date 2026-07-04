@@ -8,6 +8,7 @@ FitLog.ui = {
       b.classList.toggle('active', b.dataset.tab === tabId));
     // 탭별 onShow 렌더: 필요한 탭 모듈이 로드되어 있으면 표시 시점에 다시 그린다.
     if (tabId === 'workout' && FitLog.workout) FitLog.workout.render();
+    if (tabId === 'body' && FitLog.body) FitLog.body.render();
   },
   toast(message) {
     const el = document.getElementById('toast');
