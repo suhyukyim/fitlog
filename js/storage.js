@@ -76,14 +76,3 @@ FitLog.storage = {
     this.saveExerciseDB(db);
   }
 };
-
-FitLog.data.DEFAULT_EXERCISE_DB = {
-  bodyParts: FitLog.data.PRESET.map(preset => ({
-    id: null,
-    name: preset.name,
-    exercises: preset.exercises.map(exName => ({
-      id: null,
-      name: exName
-    }))
-  }))
-};
