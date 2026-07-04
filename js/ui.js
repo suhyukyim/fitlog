@@ -12,11 +12,15 @@ FitLog.ui = {
     const el = document.getElementById('toast');
     el.textContent = message;
     el.hidden = false;
-    el.classList.add('show');
     clearTimeout(this._toastTimer);
+    clearTimeout(this._toastHideTimer);
+    void el.offsetWidth; // force reflow so the transition runs
+    el.classList.add('show');
     this._toastTimer = setTimeout(() => {
       el.classList.remove('show');
-      el.hidden = true;
+      // hide from layout after fade-out completes
+      clearTimeout(this._toastHideTimer);
+      this._toastHideTimer = setTimeout(() => { el.hidden = true; }, 250);
     }, 2000);
   }
 };
