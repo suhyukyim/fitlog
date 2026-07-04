@@ -6,7 +6,8 @@ FitLog.ui = {
       p.classList.toggle('active', p.id === 'tab-' + tabId));
     document.querySelectorAll('.tab-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.tab === tabId));
-    // 이후 태스크에서 탭별 onShow 렌더 호출 추가
+    // 탭별 onShow 렌더: 필요한 탭 모듈이 로드되어 있으면 표시 시점에 다시 그린다.
+    if (tabId === 'workout' && FitLog.workout) FitLog.workout.render();
   },
   toast(message) {
     const el = document.getElementById('toast');

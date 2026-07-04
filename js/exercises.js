@@ -25,6 +25,10 @@
   FitLog.exercises = {
     // onSelect(exerciseName)을 호출한 뒤 오버레이를 닫는다.
     openPicker(onSelect) {
+      // 재진입 방지: 이미 열려있는 오버레이가 있으면 무시한다.
+      if (document.querySelector('.picker-overlay')) {
+        return;
+      }
       let currentPartId = null;
 
       const overlay = document.createElement('div');
