@@ -100,6 +100,7 @@
     routines = routines.filter(function(r) { return r.id !== id; });
     FitLog.storage.saveRoutines(routines);
     renderList();
+    FitLog.ui.toast('루틴을 삭제했습니다');
   }
 
   // ---------- 생성/수정 편집 화면 (풀스크린 오버레이) ----------
@@ -364,6 +365,7 @@
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    FitLog.ui.toast('내보냈습니다');
   }
 
   function handleImportFile(file) {

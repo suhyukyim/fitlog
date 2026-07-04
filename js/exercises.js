@@ -188,6 +188,7 @@
           db.bodyParts.push({ id: FitLog.storage.uuid(), name: value, exercises: [] });
           FitLog.storage.saveExerciseDB(db);
           render();
+          FitLog.ui.toast('부위를 추가했습니다');
           return true;
         });
       }
@@ -208,6 +209,7 @@
           target.name = value;
           FitLog.storage.saveExerciseDB(db);
           render();
+          FitLog.ui.toast('부위 이름을 수정했습니다');
           return true;
         });
       }
@@ -218,6 +220,7 @@
           db.bodyParts = db.bodyParts.filter(function(p) { return p.id !== part.id; });
           FitLog.storage.saveExerciseDB(db);
           render();
+          FitLog.ui.toast('부위를 삭제했습니다');
         });
       }
 
@@ -237,6 +240,7 @@
           target.exercises.push({ id: FitLog.storage.uuid(), name: value });
           FitLog.storage.saveExerciseDB(db);
           render();
+          FitLog.ui.toast('종목을 추가했습니다');
           return true;
         });
       }
@@ -259,6 +263,7 @@
           exTarget.name = value;
           FitLog.storage.saveExerciseDB(db);
           render();
+          FitLog.ui.toast('종목 이름을 수정했습니다');
           return true;
         });
       }
@@ -272,6 +277,7 @@
             FitLog.storage.saveExerciseDB(db);
           }
           render();
+          FitLog.ui.toast('종목을 삭제했습니다');
         });
       }
 

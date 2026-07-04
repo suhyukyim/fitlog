@@ -8,8 +8,21 @@ FitLog.storage = {
     }
   },
 
+  // localStorage.setItem은 저장 공간 초과(QuotaExceededError) 등으로 던질 수 있다.
+  // 여기서 잡아 토스트로 안내하지 않으면 호출부의 이후 코드(주로 render())가 실행되지
+  // 않아 화면이 먹통이 된 것처럼 보인다. 실패 시 false를 반환(호출부는 대부분 반환값을
+  // 쓰지 않지만, 실패해도 예외가 위로 전파되지 않아 뒤따르는 render()는 정상 실행되고
+  // 저장되지 않은 값은 다음 getSessions() 등에서 그대로 드러난다).
   save(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      if (FitLog.ui && typeof FitLog.ui.toast === 'function') {
+        FitLog.ui.toast('저장 공간이 부족하여 저장하지 못했습니다');
+      }
+      return false;
+    }
   },
 
   getSessions() {

@@ -180,7 +180,12 @@
     addBtn.textContent = '+ 종목 추가';
     addBtn.addEventListener('click', function() {
       FitLog.exercises.openPicker(function(name) {
+        // 이미 오늘 세션에 있는 종목을 다시 선택한 경우 addExercisesByNames는 아무것도
+        // 추가하지 않는다(중복 방지). 이때도 "추가했습니다"라고 토스트를 띄우면 실제
+        // 결과와 다른 안내가 되므로, 추가 전 상태를 미리 확인해 메시지를 구분한다.
+        const alreadyExists = !!(session && session.exercises.some(function(e) { return e.name === name; }));
         addExercisesByNames(workout, [name]);
+        FitLog.ui.toast(alreadyExists ? '이미 추가된 종목입니다' : '종목을 추가했습니다');
       });
     });
     area.appendChild(addBtn);
@@ -224,6 +229,7 @@
     delBtn.addEventListener('click', function() {
       FitLog.ui.confirm('"' + ex.name + '" 종목을 삭제할까요?', function() {
         removeExercise(workout, session.id, ex.name);
+        FitLog.ui.toast('종목을 삭제했습니다');
       });
     });
 
@@ -289,6 +295,7 @@
       delBtn.setAttribute('aria-label', '세트 삭제');
       delBtn.addEventListener('click', function() {
         removeSet(workout, session.id, ex.name, idx);
+        FitLog.ui.toast('세트를 삭제했습니다');
       });
 
       actions.appendChild(editBtn);
@@ -335,6 +342,7 @@
           return;
         }
         updateSet(workout, session.id, ex.name, idx, result.value);
+        FitLog.ui.toast('세트를 수정했습니다');
       });
 
       row.appendChild(weightInput);
@@ -407,6 +415,7 @@
         return;
       }
       addSet(workout, session.id, ex.name, result.value);
+      FitLog.ui.toast('세트를 추가했습니다');
     });
 
     row.appendChild(weightInput);
@@ -417,8 +426,10 @@
   }
 
   // 무게 > 0, 횟수(정수) >= 1, RPE는 빈 값 또는 1~10
+  // weight/reps/rpe 모두 Number()로 통일한다(parseFloat은 "60kg" 같은 앞부분만 숫자인
+  // 문자열도 60으로 통과시켜버려 reps의 Number() 기준과 결과가 달라질 수 있었다).
   function validateSetInputs(weightStr, repsStr, rpeStr) {
-    const weight = parseFloat(weightStr);
+    const weight = Number(weightStr);
     if (!isFinite(weight) || !(weight > 0)) {
       return { ok: false, message: '무게는 0보다 커야 합니다' };
     }

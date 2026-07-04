@@ -237,6 +237,7 @@
     delBtn.addEventListener('click', function() {
       FitLog.ui.confirm(formatShortDate(m.date) + ' 기록을 삭제할까요?', function() {
         removeEntry(bodyState, m.date);
+        FitLog.ui.toast('삭제했습니다');
       });
     });
 

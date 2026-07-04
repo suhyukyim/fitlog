@@ -6,6 +6,7 @@
   --text-dim: #9aa0a6;
   --accent: #4f9cf9;
   --danger: #f28b82;
+  --scrim: rgba(0, 0, 0, 0.55);
 }
 
 * {
@@ -200,7 +201,7 @@ main {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.55);
+  background-color: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -505,7 +506,9 @@ main {
   border: 1px solid var(--border);
   background-color: var(--bg);
   color: var(--text);
-  font-size: 14px;
+  /* 다른 입력 필드(.body-input/.modal-input)와 동일하게 16px로 통일:
+     14px 미만/근접 값은 iOS Safari에서 포커스 시 자동 확대(zoom)를 유발한다. */
+  font-size: 16px;
 }
 
 .set-add-row {
