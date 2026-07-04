@@ -74,5 +74,52 @@ FitLog.storage = {
       }))
     };
     this.saveExerciseDB(db);
+  },
+
+  // 4개 데이터 키를 하나의 JSON 문자열로 직렬화한다. exportedAt은 백업 시각(ISO
+  // 문자열)이며, 앱 내 날짜(YYYY-MM-DD, todayStr())와는 별개의 타임스탬프이다.
+  exportJSON() {
+    return JSON.stringify({
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      sessions: this.getSessions(),
+      bodyMetrics: this.getBodyMetrics(),
+      routines: this.getRoutines(),
+      exerciseDB: this.getExerciseDB()
+    });
+  },
+
+  // 구조 검증을 모두 통과한 뒤에만 저장을 시작한다(중간에 실패하면 어떤
+  // localStorage 키도 건드리지 않은 채 false를 반환).
+  importJSON(text) {
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      return false;
+    }
+
+    if (!data || typeof data !== 'object') {
+      return false;
+    }
+
+    const sessions = data.sessions;
+    const bodyMetrics = data.bodyMetrics;
+    const routines = data.routines;
+    const exerciseDB = data.exerciseDB;
+
+    if (!Array.isArray(sessions) || !Array.isArray(bodyMetrics) || !Array.isArray(routines)) {
+      return false;
+    }
+    if (!exerciseDB || typeof exerciseDB !== 'object' || Array.isArray(exerciseDB) ||
+        !Array.isArray(exerciseDB.bodyParts)) {
+      return false;
+    }
+
+    this.saveSessions(sessions);
+    this.saveBodyMetrics(bodyMetrics);
+    this.saveRoutines(routines);
+    this.saveExerciseDB(exerciseDB);
+    return true;
   }
 };

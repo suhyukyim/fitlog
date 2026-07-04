@@ -12,6 +12,10 @@
     openApplyPicker: openApplyPicker
   };
 
+  // 데이터 관리 버튼은 index.html에 정적으로 존재하고 다시 그려지지 않으므로,
+  // 다른 탭 요소처럼 render()마다 바인딩하지 않고 모듈 로드 시 한 번만 바인딩한다.
+  bindDataManagement();
+
   // ---------- 루틴 목록 ----------
 
   function renderList() {
@@ -323,5 +327,70 @@
     // workout.js 한 곳에 남고, 저장/렌더 순서를 다시 조율할 필요가 없어 더 단순하다).
     FitLog.workout.addExercisesByNames(routine.exerciseNames, routine.name);
     FitLog.ui.toast('루틴을 적용했습니다');
+  }
+
+  // ---------- 데이터 관리 (JSON export/import 백업) ----------
+
+  function bindDataManagement() {
+    const exportBtn = document.getElementById('export-btn');
+    const importBtn = document.getElementById('import-btn');
+    const importInput = document.getElementById('import-file-input');
+    if (!exportBtn || !importBtn || !importInput) return;
+
+    exportBtn.addEventListener('click', handleExport);
+
+    importBtn.addEventListener('click', function() {
+      importInput.click();
+    });
+
+    importInput.addEventListener('change', function() {
+      const file = importInput.files && importInput.files[0];
+      // 같은 파일을 연달아 선택해도 change 이벤트가 다시 발생하도록 즉시 초기화한다.
+      importInput.value = '';
+      if (!file) return;
+      handleImportFile(file);
+    });
+  }
+
+  function handleExport() {
+    const json = FitLog.storage.exportJSON();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'fitlog-backup-' + FitLog.storage.todayStr() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImportFile(file) {
+    const reader = new FileReader();
+
+    reader.onload = function() {
+      const text = String(reader.result || '');
+      FitLog.ui.confirm('기존 데이터를 덮어씁니다. 계속할까요?', function() {
+        const ok = FitLog.storage.importJSON(text);
+        if (!ok) {
+          FitLog.ui.toast('올바르지 않은 백업 파일입니다');
+          return;
+        }
+        // 전 탭 재렌더: 각 탭 모듈은 자신의 정적 컨테이너만 다시 그리므로
+        // 현재 보이지 않는 탭도 다음에 전환될 때 최신 데이터를 보여준다.
+        FitLog.workout.render();
+        FitLog.body.render();
+        FitLog.stats.render();
+        renderList();
+        FitLog.ui.toast('데이터를 가져왔습니다');
+      });
+    };
+
+    reader.onerror = function() {
+      FitLog.ui.toast('파일을 읽을 수 없습니다');
+    };
+
+    reader.readAsText(file);
   }
 })();

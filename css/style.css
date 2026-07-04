@@ -725,3 +725,23 @@ main {
   font-size: 13px;
   margin-top: 2px;
 }
+
+/* 루틴 탭 - 데이터 관리(JSON export/import 백업) */
+.data-mgmt-card {
+  margin-top: 20px;
+}
+
+.data-mgmt-title {
+  font-size: 15px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.data-mgmt-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.data-mgmt-btns .btn {
+  flex: 1;
+}
