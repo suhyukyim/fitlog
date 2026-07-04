@@ -10,6 +10,7 @@ FitLog.ui = {
     if (tabId === 'workout' && FitLog.workout) FitLog.workout.render();
     if (tabId === 'body' && FitLog.body) FitLog.body.render();
     if (tabId === 'stats' && FitLog.stats) FitLog.stats.render();
+    if (tabId === 'routines' && FitLog.routines) FitLog.routines.render();
   },
   toast(message) {
     const el = document.getElementById('toast');

@@ -29,8 +29,9 @@
       renderSession(this);
     },
 
-    addExercisesByNames: function(names) {
-      addExercisesByNames(this, names);
+    // routineName(선택): 지정하면 세션의 routineName을 함께 설정한다(루틴 적용 시 사용).
+    addExercisesByNames: function(names, routineName) {
+      addExercisesByNames(this, names, routineName);
     }
   };
 
@@ -163,6 +164,15 @@
         area.appendChild(buildExerciseCard(workout, session, ex));
       });
     }
+
+    const routineBtn = document.createElement('button');
+    routineBtn.type = 'button';
+    routineBtn.className = 'btn session-routine-btn';
+    routineBtn.textContent = '루틴 불러오기';
+    routineBtn.addEventListener('click', function() {
+      if (FitLog.routines) FitLog.routines.openApplyPicker();
+    });
+    area.appendChild(routineBtn);
 
     const addBtn = document.createElement('button');
     addBtn.type = 'button';
@@ -478,7 +488,7 @@
     workout.render();
   }
 
-  function addExercisesByNames(workout, names) {
+  function addExercisesByNames(workout, names, routineName) {
     let sessions = FitLog.storage.getSessions();
     let session = sessions.find(function(s) { return s.date === workout.selectedDate; });
     if (!session) {
@@ -490,6 +500,9 @@
         session.exercises.push({ name: name, sets: [] });
       }
     });
+    if (routineName) {
+      session.routineName = routineName;
+    }
     FitLog.storage.saveSessions(sessions);
     workout.render();
   }
