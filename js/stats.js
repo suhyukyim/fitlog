@@ -23,11 +23,14 @@
 
   // ---------- 종목 목록 ----------
 
+  // 1RM은 근력 종목에만 의미가 있으므로 time/cardio 스냅샷 종목은 목록에서 제외
   function getAllExerciseNames(sessions) {
     const seen = Object.create(null);
     const names = [];
     sessions.forEach(function(s) {
       (s.exercises || []).forEach(function(ex) {
+        const type = ex.type || 'weight';
+        if (type !== 'weight') return;
         if (!seen[ex.name]) {
           seen[ex.name] = true;
           names.push(ex.name);
@@ -49,6 +52,7 @@
 
       let maxOneRM = null;
       ex.sets.forEach(function(set) {
+        if (set.weight === undefined) return;
         const weight = Number(set.weight) || 0;
         const reps = Number(set.reps) || 0;
         const oneRM = weight * (1 + reps / 30);
@@ -143,6 +147,7 @@
     let total = 0;
     (session.exercises || []).forEach(function(ex) {
       (ex.sets || []).forEach(function(set) {
+        if (set.weight === undefined || set.reps === undefined) return;
         const weight = Number(set.weight) || 0;
         const reps = Number(set.reps) || 0;
         total += weight * reps;
