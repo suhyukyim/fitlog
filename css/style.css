@@ -526,6 +526,11 @@ main {
   min-width: 0;
 }
 
+/* 유산소는 한 줄에 4칸(km/분/초/kcal)이 들어가므로 좌우 패딩을 줄인다 */
+.set-input-cardio {
+  padding: 6px 4px;
+}
+
 /* 체중 탭 - 입력 폼 */
 .body-form-card {
   display: flex;

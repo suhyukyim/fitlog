@@ -195,8 +195,9 @@
     area.appendChild(addBtn);
   }
 
-  // 같은 이름 종목이 있는 세션 중 date < beforeDate인 가장 최근 세션에서 최고 무게 세트
-  function findPreviousBest(name, beforeDate) {
+  // 같은 이름 종목이 있는 세션 중 date < beforeDate인 가장 최근 세션에서
+  // type에 맞는 대표 세트를 찾는다. weight: 최고 무게, time: 최장 시간, cardio: 마지막 세트.
+  function findPreviousBest(name, beforeDate, type) {
     const sessions = FitLog.storage.getSessions();
     let bestSession = null;
     sessions.forEach(function(s) {
@@ -207,11 +208,25 @@
     if (!bestSession) return null;
     const ex = bestSession.exercises.find(function(e) { return e.name === name; });
     if (!ex || ex.sets.length === 0) return null;
-    let best = ex.sets[0];
+
+    if (type === 'cardio') {
+      const last = ex.sets[ex.sets.length - 1];
+      return isCardioSet(last) ? { set: last } : null;
+    }
+    if (type === 'time') {
+      let best = null;
+      ex.sets.forEach(function(st) {
+        if (st.durationSec === undefined || st.durationSec === null || isCardioSet(st)) return;
+        if (best === null || st.durationSec > best.durationSec) best = st;
+      });
+      return best ? { set: best } : null;
+    }
+    let best = null;
     ex.sets.forEach(function(st) {
-      if (st.weight > best.weight) best = st;
+      if (st.weight === undefined) return;
+      if (best === null || st.weight > best.weight) best = st;
     });
-    return best;
+    return best ? { set: best } : null;
   }
 
   function buildExerciseCard(workout, session, ex) {
@@ -242,35 +257,109 @@
     header.appendChild(delBtn);
     card.appendChild(header);
 
-    const prev = findPreviousBest(ex.name, session.date);
+    const type = ex.type || 'weight';
+    const prev = findPreviousBest(ex.name, session.date, type);
     if (prev) {
       const prevEl = document.createElement('div');
       prevEl.className = 'exercise-prev';
-      prevEl.textContent = '지난번: ' + prev.weight + 'kg × ' + prev.reps;
+      prevEl.textContent = formatPrevLabel(type, prev.set);
       card.appendChild(prevEl);
     }
 
     const setList = document.createElement('div');
     setList.className = 'set-list';
     ex.sets.forEach(function(set, idx) {
-      setList.appendChild(buildSetRow(workout, session, ex, idx));
+      setList.appendChild(buildSetRow(workout, session, ex, idx, type));
     });
     card.appendChild(setList);
 
-    card.appendChild(buildAddSetRow(workout, session, ex, prev));
+    card.appendChild(buildAddSetRow(workout, session, ex, prev, type));
 
     return card;
   }
 
+  // 초 → 'm:ss' (유산소 표시용). 예: 1830 → '30:30', 45 → '0:45'
+  function formatDuration(sec) {
+    return Math.floor(sec / 60) + ':' + pad2(sec % 60);
+  }
+
+  function isCardioSet(set) {
+    return 'km' in set || 'kcal' in set;
+  }
+
+  function cardioParts(set) {
+    const parts = [];
+    if (set.km !== null && set.km !== undefined) parts.push(set.km + 'km');
+    if (set.durationSec !== null && set.durationSec !== undefined) parts.push(formatDuration(set.durationSec));
+    if (set.kcal !== null && set.kcal !== undefined) parts.push(set.kcal + 'kcal');
+    return parts.join(' · ');
+  }
+
+  // 세트 형태(필드) 기준으로 포맷: cardio > time > weight 순으로 판별.
+  // 종목의 type을 나중에 바꿔도 과거 세트는 기록 당시 형식대로 표시된다.
   function formatSetLabel(set, idx) {
-    let text = (idx + 1) + '세트 ' + set.weight + 'kg × ' + set.reps + '회';
+    const prefix = (idx + 1) + '세트 ';
+    if (isCardioSet(set)) {
+      return prefix + cardioParts(set);
+    }
+    if ('durationSec' in set) {
+      return prefix + set.durationSec + '초';
+    }
+    let text = prefix + set.weight + 'kg × ' + set.reps + '회';
     if (set.rpe !== null && set.rpe !== undefined && set.rpe !== '') {
       text += ' RPE ' + set.rpe;
     }
     return text;
   }
 
-  function buildSetRow(workout, session, ex, idx) {
+  function formatPrevLabel(type, set) {
+    if (type === 'time') return '지난번: ' + set.durationSec + '초';
+    if (type === 'cardio') return '지난번: ' + cardioParts(set);
+    return '지난번: ' + set.weight + 'kg × ' + set.reps;
+  }
+
+  function numberInput(className, placeholder, step, value, ariaLabel) {
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.className = className;
+    input.placeholder = placeholder;
+    input.step = step;
+    input.value = (value === null || value === undefined) ? '' : value;
+    input.setAttribute('aria-label', ariaLabel);
+    return input;
+  }
+
+  // type별 입력 칸 묶음. read()는 { ok, value } 또는 { ok: false, message }를 반환.
+  function createSetEditor(type, fill) {
+    if (type === 'time') {
+      const secInput = numberInput('set-input set-input-sec', '초', '1', fill.durationSec, '시간(초)');
+      return {
+        inputs: [secInput],
+        read: function() { return validateTimeInput(secInput.value); }
+      };
+    }
+    if (type === 'cardio') {
+      const kmInput = numberInput('set-input set-input-cardio', 'km', '0.1', fill.km, '거리(km)');
+      const minInput = numberInput('set-input set-input-cardio', '분', '1', fill.min, '분');
+      const secInput = numberInput('set-input set-input-cardio', '초', '1', fill.sec, '초');
+      const kcalInput = numberInput('set-input set-input-cardio', 'kcal', '1', fill.kcal, '칼로리');
+      return {
+        inputs: [kmInput, minInput, secInput, kcalInput],
+        read: function() {
+          return validateCardioInputs(kmInput.value, minInput.value, secInput.value, kcalInput.value);
+        }
+      };
+    }
+    const weightInput = numberInput('set-input set-input-weight', 'kg', '0.5', fill.weight, '무게(kg)');
+    const repsInput = numberInput('set-input set-input-reps', '횟수', '1', fill.reps, '횟수');
+    const rpeInput = numberInput('set-input set-input-rpe', 'RPE', '0.5', fill.rpe, 'RPE');
+    return {
+      inputs: [weightInput, repsInput, rpeInput],
+      read: function() { return validateSetInputs(weightInput.value, repsInput.value, rpeInput.value); }
+    };
+  }
+
+  function buildSetRow(workout, session, ex, idx, type) {
     const row = document.createElement('div');
     row.className = 'set-row';
 
@@ -310,39 +399,21 @@
       row.appendChild(actions);
     }
 
+    // 과거 세트 형태와 카드의 현재 type이 달라도 편집 칸은 현재 type 기준으로 열리고
+    // 저장 시 현재 type 형태로 바뀐다(수정은 곧 새 형식으로 재입력).
     function renderEdit() {
       row.innerHTML = '';
       row.classList.add('set-row-editing');
       const set = ex.sets[idx];
 
-      const weightInput = document.createElement('input');
-      weightInput.type = 'number';
-      weightInput.className = 'set-input set-input-weight';
-      weightInput.value = set.weight;
-      weightInput.step = '0.5';
-      weightInput.setAttribute('aria-label', '무게(kg)');
-
-      const repsInput = document.createElement('input');
-      repsInput.type = 'number';
-      repsInput.className = 'set-input set-input-reps';
-      repsInput.value = set.reps;
-      repsInput.step = '1';
-      repsInput.setAttribute('aria-label', '횟수');
-
-      const rpeInput = document.createElement('input');
-      rpeInput.type = 'number';
-      rpeInput.className = 'set-input set-input-rpe';
-      rpeInput.value = (set.rpe === null || set.rpe === undefined) ? '' : set.rpe;
-      rpeInput.step = '0.5';
-      rpeInput.placeholder = 'RPE';
-      rpeInput.setAttribute('aria-label', 'RPE');
+      const editor = createSetEditor(type, setToFill(type, set));
 
       const saveBtn = document.createElement('button');
       saveBtn.type = 'button';
       saveBtn.className = 'btn btn-primary';
       saveBtn.textContent = '저장';
       saveBtn.addEventListener('click', function() {
-        const result = validateSetInputs(weightInput.value, repsInput.value, rpeInput.value);
+        const result = editor.read();
         if (!result.ok) {
           FitLog.ui.toast(result.message);
           return;
@@ -352,9 +423,7 @@
         }
       });
 
-      row.appendChild(weightInput);
-      row.appendChild(repsInput);
-      row.appendChild(rpeInput);
+      editor.inputs.forEach(function(input) { row.appendChild(input); });
       row.appendChild(saveBtn);
     }
 
@@ -362,61 +431,55 @@
     return row;
   }
 
-  function getPrefillValues(ex, prev) {
-    if (ex.sets.length > 0) {
-      const last = ex.sets[ex.sets.length - 1];
+  // 세트 객체 → type별 입력 프리필 값
+  function setToFill(type, set) {
+    if (type === 'time') {
+      return { durationSec: 'durationSec' in set ? set.durationSec : '' };
+    }
+    if (type === 'cardio') {
+      const hasDur = set.durationSec !== null && set.durationSec !== undefined;
       return {
-        weight: last.weight,
-        reps: last.reps,
-        rpe: (last.rpe === null || last.rpe === undefined) ? '' : last.rpe
+        km: set.km,
+        min: hasDur ? Math.floor(set.durationSec / 60) : '',
+        sec: hasDur ? set.durationSec % 60 : '',
+        kcal: set.kcal
       };
     }
-    if (prev) {
-      return {
-        weight: prev.weight,
-        reps: prev.reps,
-        rpe: (prev.rpe === null || prev.rpe === undefined) ? '' : prev.rpe
-      };
-    }
+    return {
+      weight: set.weight,
+      reps: set.reps,
+      rpe: (set.rpe === null || set.rpe === undefined) ? '' : set.rpe
+    };
+  }
+
+  function emptyFill(type) {
+    if (type === 'time') return { durationSec: '' };
+    if (type === 'cardio') return { km: '', min: '', sec: '', kcal: '' };
     return { weight: '', reps: '', rpe: '' };
   }
 
-  function buildAddSetRow(workout, session, ex, prev) {
+  function getPrefillValues(type, ex, prev) {
+    if (ex.sets.length > 0) {
+      return setToFill(type, ex.sets[ex.sets.length - 1]);
+    }
+    if (prev) {
+      return setToFill(type, prev.set);
+    }
+    return emptyFill(type);
+  }
+
+  function buildAddSetRow(workout, session, ex, prev, type) {
     const row = document.createElement('div');
     row.className = 'set-row set-add-row';
 
-    const fill = getPrefillValues(ex, prev);
-
-    const weightInput = document.createElement('input');
-    weightInput.type = 'number';
-    weightInput.className = 'set-input set-input-weight';
-    weightInput.placeholder = 'kg';
-    weightInput.step = '0.5';
-    weightInput.value = fill.weight;
-    weightInput.setAttribute('aria-label', '무게(kg)');
-
-    const repsInput = document.createElement('input');
-    repsInput.type = 'number';
-    repsInput.className = 'set-input set-input-reps';
-    repsInput.placeholder = '횟수';
-    repsInput.step = '1';
-    repsInput.value = fill.reps;
-    repsInput.setAttribute('aria-label', '횟수');
-
-    const rpeInput = document.createElement('input');
-    rpeInput.type = 'number';
-    rpeInput.className = 'set-input set-input-rpe';
-    rpeInput.placeholder = 'RPE';
-    rpeInput.step = '0.5';
-    rpeInput.value = fill.rpe;
-    rpeInput.setAttribute('aria-label', 'RPE');
+    const editor = createSetEditor(type, getPrefillValues(type, ex, prev));
 
     const addBtn = document.createElement('button');
     addBtn.type = 'button';
     addBtn.className = 'btn btn-primary';
     addBtn.textContent = '추가';
     addBtn.addEventListener('click', function() {
-      const result = validateSetInputs(weightInput.value, repsInput.value, rpeInput.value);
+      const result = editor.read();
       if (!result.ok) {
         FitLog.ui.toast(result.message);
         return;
@@ -426,9 +489,7 @@
       }
     });
 
-    row.appendChild(weightInput);
-    row.appendChild(repsInput);
-    row.appendChild(rpeInput);
+    editor.inputs.forEach(function(input) { row.appendChild(input); });
     row.appendChild(addBtn);
     return row;
   }
@@ -457,6 +518,58 @@
     }
 
     return { ok: true, value: { weight: weight, reps: reps, rpe: rpe } };
+  }
+
+  // 초는 1 이상의 정수
+  function validateTimeInput(secStr) {
+    const sec = Number(secStr);
+    if (!Number.isInteger(sec) || sec < 1) {
+      return { ok: false, message: '초는 1 이상의 정수여야 합니다' };
+    }
+    return { ok: true, value: { durationSec: sec } };
+  }
+
+  // km·시간(분:초)·kcal 중 최소 한 항목 입력. 빈 항목은 null로 저장.
+  function validateCardioInputs(kmStr, minStr, secStr, kcalStr) {
+    const kmT = String(kmStr === undefined || kmStr === null ? '' : kmStr).trim();
+    const minT = String(minStr === undefined || minStr === null ? '' : minStr).trim();
+    const secT = String(secStr === undefined || secStr === null ? '' : secStr).trim();
+    const kcalT = String(kcalStr === undefined || kcalStr === null ? '' : kcalStr).trim();
+
+    let km = null;
+    if (kmT !== '') {
+      km = Number(kmT);
+      if (!isFinite(km) || !(km > 0)) {
+        return { ok: false, message: '거리는 0보다 커야 합니다' };
+      }
+    }
+
+    let durationSec = null;
+    if (minT !== '' || secT !== '') {
+      const min = minT === '' ? 0 : Number(minT);
+      const sec = secT === '' ? 0 : Number(secT);
+      if (!Number.isInteger(min) || min < 0) {
+        return { ok: false, message: '분은 0 이상의 정수여야 합니다' };
+      }
+      if (!Number.isInteger(sec) || sec < 0 || sec > 59) {
+        return { ok: false, message: '초는 0~59 사이의 정수여야 합니다' };
+      }
+      durationSec = min * 60 + sec;
+      if (durationSec === 0) durationSec = null;
+    }
+
+    let kcal = null;
+    if (kcalT !== '') {
+      kcal = Number(kcalT);
+      if (!Number.isInteger(kcal) || kcal < 1) {
+        return { ok: false, message: '칼로리는 1 이상의 정수여야 합니다' };
+      }
+    }
+
+    if (km === null && durationSec === null && kcal === null) {
+      return { ok: false, message: 'km·시간·칼로리 중 하나 이상 입력해주세요' };
+    }
+    return { ok: true, value: { km: km, durationSec: durationSec, kcal: kcal } };
   }
 
   // ---------- 저장 헬퍼 (모두 즉시 saveSessions + render) ----------
@@ -523,7 +636,11 @@
     }
     names.forEach(function(name) {
       if (!session.exercises.some(function(e) { return e.name === name; })) {
-        session.exercises.push({ name: name, sets: [] });
+        session.exercises.push({
+          name: name,
+          type: FitLog.storage.getExerciseType(name),
+          sets: []
+        });
       }
     });
     if (routineName) {
