@@ -80,13 +80,61 @@ FitLog.storage = {
       bodyParts: FitLog.data.PRESET.map(preset => ({
         id: this.uuid(),
         name: preset.name,
-        exercises: preset.exercises.map(exName => ({
+        exercises: preset.exercises.map(ex => ({
           id: this.uuid(),
-          name: exName
+          name: ex.name,
+          type: ex.type
         }))
       }))
     };
     this.saveExerciseDB(db);
+  },
+
+  // 기존 사용자 DB에 유산소 부위·종목을 보장하고 매달리기를 시간 타입으로 전환한다.
+  // 멱등: 이미 반영된 상태에서 다시 실행해도 변경 없음(변경이 있을 때만 저장).
+  migrateExerciseTypes() {
+    const db = this.getExerciseDB();
+    let changed = false;
+
+    let cardioPart = db.bodyParts.find(function(p) { return p.name === '유산소'; });
+    if (!cardioPart) {
+      cardioPart = { id: this.uuid(), name: '유산소', exercises: [] };
+      db.bodyParts.push(cardioPart);
+      changed = true;
+    }
+    FitLog.data.CARDIO_NAMES.forEach(function(name) {
+      if (!cardioPart.exercises.some(function(e) { return e.name === name; })) {
+        cardioPart.exercises.push({ id: FitLog.storage.uuid(), name: name, type: 'cardio' });
+        changed = true;
+      }
+    });
+
+    db.bodyParts.forEach(function(part) {
+      part.exercises.forEach(function(ex) {
+        if (ex.name === '매달리기' && ex.type !== 'time') {
+          ex.type = 'time';
+          changed = true;
+        }
+      });
+    });
+
+    if (changed) {
+      this.saveExerciseDB(db);
+    }
+  },
+
+  // 종목 이름으로 기록 방식 조회. DB에 없거나 type이 없으면 'weight'.
+  getExerciseType(name) {
+    const db = this.getExerciseDB();
+    for (let i = 0; i < db.bodyParts.length; i++) {
+      const exercises = db.bodyParts[i].exercises;
+      for (let j = 0; j < exercises.length; j++) {
+        if (exercises[j].name === name) {
+          return exercises[j].type || 'weight';
+        }
+      }
+    }
+    return 'weight';
   },
 
   // 4개 데이터 키를 하나의 JSON 문자열로 직렬화한다. exportedAt은 백업 시각(ISO
