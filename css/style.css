@@ -250,6 +250,10 @@ main {
   outline-offset: 1px;
 }
 
+.modal-type-select {
+  margin-top: 8px;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

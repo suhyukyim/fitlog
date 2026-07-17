@@ -22,6 +22,41 @@
     }
   }
 
+  // 종목 추가/수정용: 이름 + 기록 방식 선택. onSave(name, type)이 false를 반환하면 닫히지 않는다.
+  function openExerciseModal(title, initialName, initialType, onSave) {
+    FitLog.ui.modal({
+      title: title,
+      bodyHTML:
+        '<input type="text" class="modal-input" autocomplete="off">' +
+        '<select class="modal-input modal-type-select" aria-label="기록 방식">' +
+        '<option value="weight">근력 (kg × 횟수)</option>' +
+        '<option value="time">시간 (초)</option>' +
+        '<option value="cardio">유산소 (km · 시간 · kcal)</option>' +
+        '</select>',
+      onConfirm: function() {
+        const input = document.querySelector('#modal-root .modal-input[type="text"]');
+        const select = document.querySelector('#modal-root .modal-type-select');
+        const name = input ? input.value.trim() : '';
+        const type = select ? select.value : 'weight';
+        return onSave(name, type);
+      }
+    });
+
+    // value는 property로 대입(속성/HTML 문자열이 아님)하여 이스케이프 없이 안전하게 채운다.
+    const input = document.querySelector('#modal-root .modal-input[type="text"]');
+    const select = document.querySelector('#modal-root .modal-type-select');
+    if (input) {
+      if (initialName) {
+        input.value = initialName;
+      }
+      input.focus();
+      input.select();
+    }
+    if (select) {
+      select.value = initialType || 'weight';
+    }
+  }
+
   FitLog.exercises = {
     // onSelect(exerciseName)을 호출한 뒤 오버레이를 닫는다.
     openPicker(onSelect) {
@@ -225,7 +260,7 @@
       }
 
       function addExercise(part) {
-        openNameModal('종목 추가', '', function(value) {
+        openExerciseModal('종목 추가', '', 'weight', function(value, type) {
           if (!value) {
             FitLog.ui.toast('이름을 입력해주세요');
             return false;
@@ -237,7 +272,7 @@
             FitLog.ui.toast('이미 존재하는 이름입니다');
             return false;
           }
-          target.exercises.push({ id: FitLog.storage.uuid(), name: value });
+          target.exercises.push({ id: FitLog.storage.uuid(), name: value, type: type });
           const ok = FitLog.storage.saveExerciseDB(db);
           render();
           if (ok) FitLog.ui.toast('종목을 추가했습니다');
@@ -246,7 +281,7 @@
       }
 
       function editExercise(part, ex) {
-        openNameModal('종목 이름 수정', ex.name, function(value) {
+        openExerciseModal('종목 수정', ex.name, ex.type || 'weight', function(value, type) {
           if (!value) {
             FitLog.ui.toast('이름을 입력해주세요');
             return false;
@@ -261,9 +296,10 @@
           const exTarget = target.exercises.find(function(e) { return e.id === ex.id; });
           if (!exTarget) return true;
           exTarget.name = value;
+          exTarget.type = type;
           const ok = FitLog.storage.saveExerciseDB(db);
           render();
-          if (ok) FitLog.ui.toast('종목 이름을 수정했습니다');
+          if (ok) FitLog.ui.toast('종목을 수정했습니다');
           return true;
         });
       }
